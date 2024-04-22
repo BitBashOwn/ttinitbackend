@@ -7,7 +7,13 @@ const app = express();
 const uri = "mongodb+srv://bitbash9:wtipzaJo2ZbqhwpS@blogdb.0jloxnk.mongodb.net/?retryWrites=true&w=majority&appName=blogdb"
 const client = new MongoClient(uri);
 app.use(express.json());
-app.use(cors()); // Retained the CORS middleware
+// CORS configuration
+const corsOptions = {
+  origin: 'https://www.ttinit.com', // Specify the allowed origin
+  methods: ['GET', 'POST','DELETE','PUT'], // Specify the allowed methods
+};
+// Apply CORS middleware with the above options
+app.use(cors(corsOptions));
 
 async function connectToDatabase() {
   try {
