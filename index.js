@@ -174,25 +174,27 @@ const authenticateToken = (req, res, next) => {
      // Login route
     
      app.post('/login', async (req, res) => {
-       try {
-         const { username, password } = req.body;
-         const user = await loginCollection.findOne({ username });
-         if (user) {
-           const match = await bcrypt.compare(password, user.password);
-           if (match) {
-             const token = jwt.sign({ userId: user._id, role: 'user' }, 'bitbash999', { expiresIn: '1h' });
-             res.json({ success: true, token: token });
-           } else {
-             res.status(401).json({ success: false, message: 'Authentication failed' });
-           }
-         } else {
-           res.status(401).json({ success: false, message: 'User not found' });
-         }
-       } catch (error) {
-         console.error("Error authenticating user:", error);
-         res.status(500).json({ success: false, message: 'Internal server error' });
-       }
-     });
+      try {
+        const { username, password } = req.body;
+        const user = await loginCollection.findOne({ username });
+        if (user) {
+          const match = await bcrypt.compare(password, user.password);
+          if (match) {
+            // Generate a unique token for each request
+            const token = jwt.sign({ userId: user._id, role: 'user', uniqueIdentifier: Math.random().toString(36).substring(7) }, 'bitbash999', { expiresIn: '1h' });
+            res.json({ success: true, token: token });
+          } else {
+            res.status(401).json({ success: false, message: 'Authentication failed' });
+          }
+        } else {
+          res.status(401).json({ success: false, message: 'User not found' });
+        }
+      } catch (error) {
+        console.error("Error authenticating user:", error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    });
+    
      
     
     // Route to add a user to the database
