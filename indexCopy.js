@@ -2,7 +2,6 @@ const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors'); 
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 
 const app = express();
 const uri = "mongodb+srv://bitbash9:wtipzaJo2ZbqhwpS@blogdb.0jloxnk.mongodb.net/?retryWrites=true&w=majority&appName=blogdb"
@@ -10,15 +9,11 @@ const client = new MongoClient(uri);
 app.use(express.json());
 // CORS configuration
 const corsOptions = {
-  origin: 'https://www.ttinit.com',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Ensure OPTIONS is implicitly handled by CORS middleware
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+  origin: 'https://www.ttinit.com', // Specify the allowed origin
+  methods: ['GET', 'POST','DELETE','PUT'], // Specify the allowed methods
 };
 // Apply CORS middleware with the above options
 app.use(cors(corsOptions));
-
 
 async function connectToDatabase() {
   try {
@@ -29,24 +24,6 @@ async function connectToDatabase() {
     throw error;
   }
 }
-
-
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (token == null) return res.sendStatus(401); // if there isn't any token
-
-  jwt.verify(token, 'bitbash999', (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
-
-
-
-
 
 (async () => {
   try {
@@ -74,7 +51,7 @@ const authenticateToken = (req, res, next) => {
       }
     });
   
-    app.post('/save-blog',authenticateToken, async (req, res) => {
+    app.post('/save-blog', async (req, res) => {
       try {
           console.log("Request body:", req.body); // Log the request body
           let blogData = req.body;
@@ -94,7 +71,7 @@ const authenticateToken = (req, res, next) => {
   
   
   
-    app.delete('/delete-blog/:id',authenticateToken, async (req, res) => {
+    app.delete('/delete-blog/:id', async (req, res) => {
       try {
         const blogId = req.params.id;
         console.log("Received blog ID:", blogId);
@@ -126,7 +103,7 @@ const authenticateToken = (req, res, next) => {
       }
     });
   
-    app.put('/update-blog/:id',authenticateToken, async (req, res) => {
+    app.put('/update-blog/:id', async (req, res) => {
       try {
           const blogId = req.params.id;
           const updates = req.body;
@@ -149,7 +126,7 @@ const authenticateToken = (req, res, next) => {
   
   
   
-    app.get('/get-all-blogs' ,async (req, res) => {
+    app.get('/get-all-blogs', async (req, res) => {
       try {
         const blogs = await blogsCollection.find().toArray();
         console.log("Fetched blogs:", blogs); // Log the fetched blogs
@@ -160,7 +137,7 @@ const authenticateToken = (req, res, next) => {
       }
     });
 
-    app.get('/users',authenticateToken, async (req, res) => {
+    app.get('/users', async (req, res) => {
       try {
         const usersCollection = client.db("blogdatabase").collection("login");
         const users = await usersCollection.find().toArray();
@@ -172,31 +149,29 @@ const authenticateToken = (req, res, next) => {
     });
     
      // Login route
-    
      app.post('/login', async (req, res) => {
-       try {
-         const { username, password } = req.body;
-         const user = await loginCollection.findOne({ username });
-         if (user) {
-           const match = await bcrypt.compare(password, user.password);
-           if (match) {
-             const token = jwt.sign({ userId: user._id, role: 'user' }, 'bitbash999', { expiresIn: '1h' });
-             res.json({ success: true, token: token });
-           } else {
-             res.status(401).json({ success: false, message: 'Authentication failed' });
-           }
-         } else {
-           res.status(401).json({ success: false, message: 'User not found' });
-         }
-       } catch (error) {
-         console.error("Error authenticating user:", error);
-         res.status(500).json({ success: false, message: 'Internal server error' });
-       }
-     });
-     
+      try {
+        const { username, password } = req.body;
+        const user = await loginCollection.findOne({ username });
+        if (user) {
+          // Compare hashed password
+          const match = await bcrypt.compare(password, user.password);
+          if (match) {
+            res.json({ success: true, message: 'Authentication successful' });
+          } else {
+            res.status(401).json({ success: false, message: 'Authentication failed' });
+          }
+        } else {
+          res.status(401).json({ success: false, message: 'Authentication failed' });
+        }
+      } catch (error) {
+        console.error("Error authenticating user:", error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    });
     
     // Route to add a user to the database
-    app.post('/add-user',authenticateToken, async (req, res) => {
+    app.post('/add-user', async (req, res) => {
       try {
         const { username, password } = req.body;
         const existingUser = await loginCollection.findOne({ username });
@@ -215,7 +190,7 @@ const authenticateToken = (req, res, next) => {
     });
 
 
-  const port =  8080;
+  const port = process.env.PORT || 8080;
   app.listen(port, () => console.log(`Server running on port ${port}`));
 } catch (error) {
   console.error("Error starting server:", error);
